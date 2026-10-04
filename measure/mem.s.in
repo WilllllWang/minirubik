@@ -1,0 +1,23 @@
+# Stage 1 measurement program.
+# Writes N_WORDS 32-bit words sequentially, starting at `buf`, then exits.
+# N_WORDS = 0 is the control: identical program, no guest memory touched.
+# Loop body is 4 instructions: sw, addi, addi, bnez.
+.equ N_WORDS, @N@
+
+.data
+buf: .word 0
+
+.text
+.globl main
+main:
+    la   t0, buf
+    li   t1, N_WORDS
+    beqz t1, done
+loop:
+    sw   t0, 0(t0)
+    addi t0, t0, 4
+    addi t1, t1, -1
+    bnez t1, loop
+done:
+    li   a7, 10
+    ecall

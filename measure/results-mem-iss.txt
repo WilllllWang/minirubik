@@ -1,0 +1,12 @@
+{'proc': 'RV32_ISS', 'n_words': 0, 'guest_bytes': 0, 'peak_rss_kb': 36408, 'iret': 6, 'cycles': 6, 'exectime_ms': 0, 'wall_s': 0.07, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 0, 'guest_bytes': 0, 'peak_rss_kb': 36388, 'iret': 6, 'cycles': 6, 'exectime_ms': 0, 'wall_s': 0.07, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 0, 'guest_bytes': 0, 'peak_rss_kb': 36124, 'iret': 6, 'cycles': 6, 'exectime_ms': 0, 'wall_s': 0.07, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80424, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 134, 'wall_s': 0.21, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80556, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 136, 'wall_s': 0.21, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80568, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 135, 'wall_s': 0.21, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 1048576, 'guest_bytes': 4194304, 'peak_rss_kb': 213984, 'iret': 4194310, 'cycles': 4194310, 'exectime_ms': 537, 'wall_s': 0.61, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 1048576, 'guest_bytes': 4194304, 'peak_rss_kb': 214116, 'iret': 4194310, 'cycles': 4194310, 'exectime_ms': 539, 'wall_s': 0.62, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 1048576, 'guest_bytes': 4194304, 'peak_rss_kb': 214104, 'iret': 4194310, 'cycles': 4194310, 'exectime_ms': 542, 'wall_s': 0.62, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 4194304, 'guest_bytes': 16777216, 'peak_rss_kb': 752952, 'iret': 16777222, 'cycles': 16777222, 'exectime_ms': 2092, 'wall_s': 2.18, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 4194304, 'guest_bytes': 16777216, 'peak_rss_kb': 752824, 'iret': 16777222, 'cycles': 16777222, 'exectime_ms': 2099, 'wall_s': 2.19, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 4194304, 'guest_bytes': 16777216, 'peak_rss_kb': 752524, 'iret': 16777222, 'cycles': 16777222, 'exectime_ms': 2095, 'wall_s': 2.19, 'rc': 0}

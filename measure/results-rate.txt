@@ -1,0 +1,9 @@
+{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80468, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 137, 'wall_s': 0.21, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80472, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 134, 'wall_s': 0.21, 'rc': 0}
+{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80428, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 133, 'wall_s': 0.21, 'rc': 0}
+{'proc': 'RV32_SS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89224, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 944, 'wall_s': 1.02, 'rc': 0}
+{'proc': 'RV32_SS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89200, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 963, 'wall_s': 1.03, 'rc': 0}
+{'proc': 'RV32_SS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89196, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 961, 'wall_s': 1.04, 'rc': 0}
+{'proc': 'RV32_5S', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89800, 'iret': 1048582, 'cycles': 1572874, 'exectime_ms': 5379, 'wall_s': 5.45, 'rc': 0}
+{'proc': 'RV32_5S', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89792, 'iret': 1048582, 'cycles': 1572874, 'exectime_ms': 5220, 'wall_s': 5.3, 'rc': 0}
+{'proc': 'RV32_5S', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89808, 'iret': 1048582, 'cycles': 1572874, 'exectime_ms': 5219, 'wall_s': 5.3, 'rc': 0}
