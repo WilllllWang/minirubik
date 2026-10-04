@@ -1,9 +1,288 @@
-{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80468, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 137, 'wall_s': 0.21, 'rc': 0}
-{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80472, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 134, 'wall_s': 0.21, 'rc': 0}
-{'proc': 'RV32_ISS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 80428, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 133, 'wall_s': 0.21, 'rc': 0}
-{'proc': 'RV32_SS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89224, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 944, 'wall_s': 1.02, 'rc': 0}
-{'proc': 'RV32_SS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89200, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 963, 'wall_s': 1.03, 'rc': 0}
-{'proc': 'RV32_SS', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89196, 'iret': 1048582, 'cycles': 1048582, 'exectime_ms': 961, 'wall_s': 1.04, 'rc': 0}
-{'proc': 'RV32_5S', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89800, 'iret': 1048582, 'cycles': 1572874, 'exectime_ms': 5379, 'wall_s': 5.45, 'rc': 0}
-{'proc': 'RV32_5S', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89792, 'iret': 1048582, 'cycles': 1572874, 'exectime_ms': 5220, 'wall_s': 5.3, 'rc': 0}
-{'proc': 'RV32_5S', 'n_words': 262144, 'guest_bytes': 1048576, 'peak_rss_kb': 89808, 'iret': 1048582, 'cycles': 1572874, 'exectime_ms': 5219, 'wall_s': 5.3, 'rc': 0}
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1048582
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+137
+	Command being timed: "ripes --mode cli --proc RV32_ISS --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 0.13
+	System time (seconds): 0.03
+	Percent of CPU this job got: 84%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.19
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 80964
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 11968
+	Voluntary context switches: 224
+	Involuntary context switches: 81
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1048582
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+943
+	Command being timed: "ripes --mode cli --proc RV32_SS --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 0.95
+	System time (seconds): 0.02
+	Percent of CPU this job got: 96%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:01.00
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 89792
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 14040
+	Voluntary context switches: 220
+	Involuntary context switches: 48
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1572874
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+5263
+	Command being timed: "ripes --mode cli --proc RV32_5S --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 5.24
+	System time (seconds): 0.04
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:05.32
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 90424
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 14743
+	Voluntary context switches: 218
+	Involuntary context switches: 87
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1048582
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+137
+	Command being timed: "ripes --mode cli --proc RV32_ISS --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 0.14
+	System time (seconds): 0.02
+	Percent of CPU this job got: 85%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.19
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 81612
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 11987
+	Voluntary context switches: 226
+	Involuntary context switches: 34
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1048582
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+138
+	Command being timed: "ripes --mode cli --proc RV32_ISS --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 0.14
+	System time (seconds): 0.02
+	Percent of CPU this job got: 86%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.19
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 81108
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 11972
+	Voluntary context switches: 213
+	Involuntary context switches: 29
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1572874
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+5252
+	Command being timed: "ripes --mode cli --proc RV32_5S --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 5.23
+	System time (seconds): 0.03
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:05.31
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 90128
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 14232
+	Voluntary context switches: 232
+	Involuntary context switches: 290
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1572874
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+5261
+	Command being timed: "ripes --mode cli --proc RV32_5S --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 5.23
+	System time (seconds): 0.04
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:05.32
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 90608
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 14243
+	Voluntary context switches: 218
+	Involuntary context switches: 164
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1048582
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+941
+	Command being timed: "ripes --mode cli --proc RV32_SS --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 0.94
+	System time (seconds): 0.02
+	Percent of CPU this job got: 96%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:01.00
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 89940
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 14576
+	Voluntary context switches: 213
+	Involuntary context switches: 47
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+qt.qpa.plugin: Could not find the Qt platform plugin "wayland" in ""
+
+Program exited with code: 0
+===== cycles
+1048582
+===== instructions retired
+1048582
+===== wall-clock model execution time (ms)
+946
+	Command being timed: "ripes --mode cli --proc RV32_SS --src /tmp/mem.s -t asm --iret --cycles --exectime"
+	User time (seconds): 0.96
+	System time (seconds): 0.03
+	Percent of CPU this job got: 96%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:01.03
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 89984
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 14044
+	Voluntary context switches: 221
+	Involuntary context switches: 41
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 224
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
