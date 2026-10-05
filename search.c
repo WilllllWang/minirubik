@@ -233,7 +233,7 @@ static int DFID(uint16_t p, uint16_t o)
 {
     nodes = 0;
     int found = 0;
-    for (int limit = 0); limit <= 11; limit++) {
+    for (int limit = 0; limit <= 11; limit++) {
         found = recursion(p, o, limit, 0, 3);
         if (found) return limit;
     }
