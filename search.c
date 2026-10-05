@@ -30,6 +30,7 @@ static const uint8_t twist[3][CUBIES] = {
 };
 
 static uint16_t permutation[3][PERMUTATIONS], orientation[3][ORIENTATIONS];
+static uint8_t perm_dist_table[PERMUTATIONS], orien_dist_table[ORIENTATIONS];
 static uint8_t path[11];
 static uint64_t nodes;
 
@@ -49,12 +50,12 @@ static uint32_t rank_state(const state_t *state)
     uint32_t p = 0, o = 0;
     for (uint8_t i = 0; i < CUBIES; ++i) {
         uint8_t smaller = 0;
-            for (uint8_t j = (uint8_t) (i + 1U); j < CUBIES; ++j)
+        for (uint8_t j = (uint8_t) (i + 1U); j < CUBIES; ++j)
             if (state->p[j] < state->p[i])
                 ++smaller;
         p = p * (CUBIES - i) + smaller;
     }
-        for (uint8_t i = 0; i < 6; ++i)
+    for (uint8_t i = 0; i < 6; ++i)
         o = o * 3U + state->o[i];
     return p * ORIENTATIONS + o;
 }
@@ -118,20 +119,14 @@ static void build_transition_table(void)
 }
 
 
-static uint8_t *build_perm_dist_table(void)
+static void build_perm_dist_table(void)
 {
-    uint8_t distance; 
-    uint8_t *perm_dist = malloc(PERMUTATIONS);
-    uint16_t *queue = malloc((size_t) PERMUTATIONS * sizeof *queue);
+    uint8_t distance;
+    uint16_t queue[PERMUTATIONS];
     uint32_t head = 0, tail = 1, level_end = 1;
-    if (!perm_dist || !queue) {
-        free(perm_dist);
-        free(queue);
-        return NULL;
-    }
-    memset(perm_dist, UINT8_MAX, PERMUTATIONS);
+    memset(perm_dist_table, UINT8_MAX, PERMUTATIONS);
     queue[0] = 0;
-    perm_dist[0] = 0;
+    perm_dist_table[0] = 0;
     distance = 1;
     while (head < tail) {
         if (head == level_end) {
@@ -143,33 +138,23 @@ static uint8_t *build_perm_dist_table(void)
             uint16_t next_p = p;
             for (uint8_t turn = 0; turn < 3; ++turn) {
                 next_p = permutation[face][next_p];
-                if (perm_dist[next_p] == UINT8_MAX) { perm_dist[next_p] = distance; queue[tail++] = next_p;
+                if (perm_dist_table[next_p] == UINT8_MAX) {
+                    perm_dist_table[next_p] = distance;
+                    queue[tail++] = next_p;
                 }
             }
         }
     }
-    free(queue);
-    if (tail != PERMUTATIONS) {
-        free(perm_dist);
-        return NULL;
-    }
-    return perm_dist;
 }
 
-static uint8_t *build_orien_dist_table(void)
+static void build_orien_dist_table(void)
 {
-    uint8_t distance; 
-    uint8_t *orien_dist = malloc(ORIENTATIONS);
-    uint16_t *queue = malloc((size_t) ORIENTATIONS * sizeof *queue);
+    uint8_t distance;
+    uint16_t queue[ORIENTATIONS];
     uint32_t head = 0, tail = 1, level_end = 1;
-    if (!orien_dist || !queue) {
-        free(orien_dist);
-        free(queue);
-        return NULL;
-    }
-    memset(orien_dist, UINT8_MAX, ORIENTATIONS);
+    memset(orien_dist_table, UINT8_MAX, ORIENTATIONS);
     queue[0] = 0;
-    orien_dist[0] = 0;
+    orien_dist_table[0] = 0;
     distance = 1;
     while (head < tail) {
         if (head == level_end) {
@@ -181,22 +166,16 @@ static uint8_t *build_orien_dist_table(void)
             uint16_t next_o = o;
             for (uint8_t turn = 0; turn < 3; ++turn) {
                 next_o = orientation[face][next_o];
-                if (orien_dist[next_o] == UINT8_MAX) {
-                    orien_dist[next_o] = distance;
+                if (orien_dist_table[next_o] == UINT8_MAX) {
+                    orien_dist_table[next_o] = distance;
                     queue[tail++] = next_o;
                 }
             }
         }
     }
-    free(queue);
-    if (tail != ORIENTATIONS) {
-        free(orien_dist);
-        return NULL;
-    }
-    return orien_dist;
 }
 
-static int check_table(uint8_t *perm_dist_table, uint8_t *orien_dist_table, int *perm_max, int *orien_max)
+static int check_table(int *perm_max, int *orien_max)
 {
     *perm_max = 0;
     if (perm_dist_table[0] != 0) return 1;
@@ -204,57 +183,74 @@ static int check_table(uint8_t *perm_dist_table, uint8_t *orien_dist_table, int 
         if (perm_dist_table[p] == UINT8_MAX) {
             return 1;
         }
-        if (perm_dist_table[p] > *perm_max) { 
+        if (perm_dist_table[p] > *perm_max) {
             *perm_max = perm_dist_table[p];
         }
-    }   
+    }
 
-    *orien_max = 0; 
+    *orien_max = 0;
     if (orien_dist_table[0] != 0) return 1;
     for (uint16_t o = 0; o < ORIENTATIONS; o++) {
         if (orien_dist_table[o] == UINT8_MAX) {
             return 1;
         }
-        if (orien_dist_table[o] > *orien_max) { 
+        if (orien_dist_table[o] > *orien_max) {
             *orien_max = orien_dist_table[o];
         }
-    } 
-    return 0;    
+    }
+    return 0;
 }
 
-int recursion(uint16_t p, uint16_t o, int limit, int curr_depth, int prev_face) 
+static uint8_t max(uint8_t a, uint8_t b)
+{
+    return a > b ? a : b;
+}
+
+static int recursion(uint16_t p, uint16_t o, int limit, int curr_depth, int prev_face)
 {
     nodes++;
     if (p == 0 && o == 0) return 1;
-    if (curr_depth == limit) return 0;
-    
+    if (curr_depth + max(perm_dist_table[p], orien_dist_table[o]) > limit) return 0;
+
     int found = 0;
     for (uint8_t face = 0; face < 3; ++face) {
         if (face == prev_face) continue;
         uint16_t next_p = p;
         uint16_t next_o = o;
         for (uint8_t turn = 0; turn < 3; ++turn) {
-            next_p = permutation[face][next_p]; 
+            next_p = permutation[face][next_p];
             next_o = orientation[face][next_o];
             path[curr_depth] = face * 3 + turn;
-            found = recursion(next_p, next_o, limit, curr_depth + 1, face);                                   
-            if (found) return found; 
+            found = recursion(next_p, next_o, limit, curr_depth + 1, face);
+            if (found) return found;
         }
     }
-    
+
     return found;
 }
 
-int DFID(uint16_t p, uint16_t o)
+static int DFID(uint16_t p, uint16_t o)
 {
     nodes = 0;
     int found = 0;
-    for (int limit = 0; limit <= 11; limit++) { 
+    for (int limit = 0); limit <= 11; limit++) {
         found = recursion(p, o, limit, 0, 3);
         if (found) return limit;
     }
-    
+
     return -1;
+}
+
+static int check_solution(uint16_t p, uint16_t o, int length)
+{
+    for (int i = 0; i < length; ++i) {
+        uint8_t face = path[i] / 3, turns = path[i] % 3 + 1;
+        for (uint8_t t = 0; t < turns; ++t) {
+            p = permutation[face][p];
+            o = orientation[face][o];
+        }
+    }
+    return p == 0 && o == 0;
 }
 
 static int parse_state(const char *input, state_t *state)
@@ -278,47 +274,35 @@ int main(int argc, char **argv)
     }
 
     build_transition_table();
-
-    uint8_t *perm_dist_table = build_perm_dist_table();
-    if (!perm_dist_table) {
-        fputs("Permutation distance table build failed\n", stderr);
-        return 1;
-    }
-
-    uint8_t *orien_dist_table = build_orien_dist_table();
-    if (!orien_dist_table) {
-        fputs("Orientation distance table build failed\n", stderr);
-        free(perm_dist_table);
-        return 1;
-    }
+    build_perm_dist_table();
+    build_orien_dist_table();
 
     int perm_max, orien_max;
-    int result = check_table(perm_dist_table, orien_dist_table, &perm_max, &orien_max);
+    int result = check_table(&perm_max, &orien_max);
     if (result == 1) {
         fputs("Table not valid\n", stderr);
-        free(perm_dist_table);
-        free(orien_dist_table);
         return 1;
     }
     printf("Table check complete\n");
     printf("Permutation Maximum = %d\nOrientation Maximum = %d\n", perm_max, orien_max);
 
     uint32_t rank = rank_state(&state);
-    int length = DFID((uint16_t) (rank / ORIENTATIONS), (uint16_t) (rank % ORIENTATIONS));
+    uint16_t p = (uint16_t) (rank / ORIENTATIONS), o = (uint16_t) (rank % ORIENTATIONS);
+    int length = DFID(p, o);
     if (length < 0) {
         fputs("No solution within 11 moves\n", stderr);
-        free(perm_dist_table);
-        free(orien_dist_table);
         return 1;
     }
-    printf("Total nodes: %ld\n", nodes);
+    if (!check_solution(p, o, length)) {
+        fputs("Solution check failed: moves do not reach solved\n", stderr);
+        return 1;
+    }
+    printf("Solution check complete\n");
+    printf("Total nodes: %llu\n", (unsigned long long) nodes);
     printf("Total moves: %d\n", length);
     printf("Moves: ");
     for (int i = 0; i < length; ++i)
         printf(" %s", move_names[path[i]]);
     putchar('\n');
-
-    free(perm_dist_table);
-    free(orien_dist_table);
     return 0;
 }
