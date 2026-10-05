@@ -222,7 +222,7 @@ static int check_table(uint8_t *perm_dist_table, uint8_t *orien_dist_table, int 
     return 0;    
 }
 
-int recursion(uint16_t p, uint16_t o, int limit, int curr_depth) 
+int recursion(uint16_t p, uint16_t o, int limit, int curr_depth, int prev_face) 
 {
     nodes++;
     if (p == 0 && o == 0) return 1;
@@ -230,13 +230,14 @@ int recursion(uint16_t p, uint16_t o, int limit, int curr_depth)
     
     int found = 0;
     for (uint8_t face = 0; face < 3; ++face) {
+        if (face == prev_face) continue;
         uint16_t next_p = p;
         uint16_t next_o = o;
         for (uint8_t turn = 0; turn < 3; ++turn) {
             next_p = permutation[face][next_p]; 
             next_o = orientation[face][next_o];
             path[curr_depth] = face * 3 + turn;
-            found = recursion(next_p, next_o, limit, curr_depth + 1);                                   
+            found = recursion(next_p, next_o, limit, curr_depth + 1, face);                                   
             if (found) return found; 
         }
     }
@@ -249,7 +250,7 @@ int DFID(uint16_t p, uint16_t o)
     nodes = 0;
     int found = 0;
     for (int limit = 0; limit <= 11; limit++) { 
-        found = recursion(p, o, limit, 0);
+        found = recursion(p, o, limit, 0, 3);
         if (found) return limit;
     }
     
