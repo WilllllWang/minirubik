@@ -43,6 +43,8 @@ static const uint8_t tracked[TRACKED] = {3, 4, 5, 6};
 static uint16_t permutation[3][PERMUTATIONS], orientation[3][ORIENTATIONS];
 static uint8_t perm_dist_table[PERMUTATIONS], orien_dist_table[ORIENTATIONS];
 static uint8_t sub_dist_table[SUB_STATES];
+static uint16_t sub_pos_table[PERMUTATIONS];
+static uint8_t twist_table[ORIENTATIONS][CUBIES];
 static uint32_t sub_solved;
 static uint8_t full_dist_table[STATES];
 static uint8_t path[11];
@@ -127,7 +129,8 @@ static sub_state_t quarter_turn_sub(sub_state_t sub_state, uint8_t face)
         for (uint8_t j = 0; j < CUBIES; ++j) {
             if (source[face][j] == sub_state.pos[i]) {
                 sub_state.pos[i] = j;
-                sub_state.tw[i] = (uint8_t) ((sub_state.tw[i] + twist[face][j]) % 3U);
+                sub_state.tw[i] =
+                    (uint8_t) ((sub_state.tw[i] + twist[face][j]) % 3U);
                 break;
             }
         }
@@ -287,6 +290,33 @@ static void build_sub_dist_table(void)
     free(queue);
 }
 
+static void tracked_positions(uint16_t p, uint8_t pos[TRACKED])
+{
+    state_t state;
+    unrank_state((uint32_t) p * ORIENTATIONS, &state);
+    for (uint8_t i = 0; i < TRACKED; ++i)
+        for (uint8_t j = 0; j < CUBIES; ++j)
+            if (state.p[j] == tracked[i])
+                pos[i] = j;
+}
+
+static void build_sub_index_tables(void)
+{
+    state_t state;
+    for (uint16_t p = 0; p < PERMUTATIONS; ++p) {
+        uint8_t pos[TRACKED];
+        tracked_positions(p, pos);
+        sub_pos_table[p] = 0;
+        for (uint8_t i = 0; i < TRACKED; ++i)
+            sub_pos_table[p] |= (uint16_t) (pos[i] << (3 * i));
+    }
+    for (uint16_t o = 0; o < ORIENTATIONS; ++o) {
+        unrank_state(o, &state);
+        for (uint8_t j = 0; j < CUBIES; ++j)
+            twist_table[o][j] = state.o[j];
+    }
+}
+
 static void build_full_dist_table(void)
 {
     uint8_t distance = 1;
@@ -326,9 +356,20 @@ static uint8_t max(uint8_t a, uint8_t b)
     return a > b ? a : b;
 }
 
+static uint32_t sub_index(uint16_t p, uint16_t o)
+{
+    sub_state_t sub_state;
+    for (uint8_t i = 0; i < TRACKED; ++i) {
+        sub_state.pos[i] = (sub_pos_table[p] >> (3 * i)) & 7;
+        sub_state.tw[i] = twist_table[o][sub_state.pos[i]];
+    }
+    return rank_sub_state(&sub_state);
+}
+
 static uint8_t guess(uint16_t p, uint16_t o)
 {
-    return max(perm_dist_table[p], orien_dist_table[o]);
+    uint8_t pt = max(perm_dist_table[p], orien_dist_table[o]);
+    return max(pt, sub_dist_table[sub_index(p, o)]);
 }
 
 static int recursion(uint16_t p, uint16_t o, int limit, int depth,
@@ -421,6 +462,18 @@ static int check_tables(int *perm_max, int *orien_max, int *sub_max,
     return 0;
 }
 
+static int check_packed(void)
+{
+    for (uint16_t p = 0; p < PERMUTATIONS; ++p) {
+        uint8_t pos[TRACKED];
+        tracked_positions(p, pos);
+        for (uint8_t i = 0; i < TRACKED; ++i)
+            if (((sub_pos_table[p] >> (3 * i)) & 7) != pos[i])
+                return 1;
+    }
+    return 0;
+}
+
 static int check_admissible(void)
 {
     for (uint32_t rank = 0; rank < STATES; ++rank) {
@@ -464,6 +517,10 @@ static int run_gates(void)
         fputs("H1 failed: guess exceeds true distance\n", stderr);
         return 1;
     }
+    if (check_packed()) {
+        fputs("H4 failed: a packed position differs\n", stderr);
+        return 1;
+    }
     uint64_t worst_nodes;
     uint32_t worst_rank;
     if (check_optimal(&worst_nodes, &worst_rank)) {
@@ -477,6 +534,8 @@ static int run_gates(void)
     printf("H2 passed: tables full, maxima %d, %d, %d, %d\n", perm_max,
            orien_max, sub_max, full_max);
     printf("H3 passed: every result is the true distance\n");
+    printf("H4 passed: packed positions match for all %d permutations\n",
+           PERMUTATIONS);
     printf("Worst distance-11 state: ");
     for (int i = 0; i < CUBIES; ++i)
         putchar('1' + worst.p[i]);
@@ -492,6 +551,7 @@ int main(int argc, char **argv)
     build_perm_dist_table();
     build_orien_dist_table();
     build_sub_dist_table();
+    build_sub_index_tables();
 
     if (argc == 2 && !strcmp(argv[1], "--gates"))
         return run_gates();
