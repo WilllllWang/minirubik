@@ -8,12 +8,20 @@ enum {
     PERMUTATIONS = 5040,
     ORIENTATIONS = 729,
     STATES = PERMUTATIONS * ORIENTATIONS,
-    MOVES = 9
+    MOVES = 9,
+    TRACKED = 4,
+    SUB_POSITIONS = 840,
+    SUB_TWISTS = 81,
+    SUB_STATES = SUB_POSITIONS * SUB_TWISTS
 };
 
 typedef struct {
     uint8_t p[CUBIES], o[CUBIES];
 } state_t;
+
+typedef struct {
+    uint8_t pos[TRACKED], tw[TRACKED];
+} sub_state_t;
 
 static const char *const move_names[MOVES] = {"R",  "R2", "R'", "B", "B2",
                                               "B'", "D",  "D2", "D'"};
@@ -30,8 +38,12 @@ static const uint8_t twist[3][CUBIES] = {
     {0, 0, 0, 0, 0, 0, 0},
 };
 
+static const uint8_t tracked[TRACKED] = {3, 4, 5, 6};
+
 static uint16_t permutation[3][PERMUTATIONS], orientation[3][ORIENTATIONS];
 static uint8_t perm_dist_table[PERMUTATIONS], orien_dist_table[ORIENTATIONS];
+static uint8_t sub_dist_table[SUB_STATES];
+static uint32_t sub_solved;
 static uint8_t full_dist_table[STATES];
 static uint8_t path[11];
 static uint64_t nodes;
@@ -55,7 +67,7 @@ static uint32_t rank_state(const state_t *state)
         for (uint8_t j = (uint8_t) (i + 1U); j < CUBIES; ++j)
             if (state->p[j] < state->p[i])
                 ++smaller;
-        p = p * (CUBIES - i) + smaller;
+        p = p * (uint32_t) (CUBIES - i) + smaller;
     }
     for (uint8_t i = 0; i < 6; ++i)
         o = o * 3U + state->o[i];
@@ -71,7 +83,7 @@ static void unrank_state(uint32_t rank, state_t *state)
         uint8_t q = (uint8_t) (p / f);
         p %= f;
         state->p[i] = available[q];
-        for (uint8_t j = q; j + 1U < (unsigned) (CUBIES - i); ++j)
+        for (uint8_t j = q; j + 1U < (uint32_t) (CUBIES - i); ++j)
             available[j] = available[j + 1U];
         if (i < 5)
             f /= 6U - i;
@@ -96,6 +108,70 @@ static int valid(const state_t *state)
         sum = (uint8_t) (sum + state->o[i]);
     }
     return sum % 3U == 0;
+}
+
+static int parse_state(const char *input, state_t *state)
+{
+    for (int i = 0; i < 14; ++i) {
+        int limit = i < 7 ? 7 : 3;
+        if (input[i] < '1' || input[i] > '0' + limit)
+            return 0;
+        (i < 7 ? state->p : state->o)[i % 7] = (uint8_t) (input[i] - '1');
+    }
+    return input[14] == '\0' && valid(state);
+}
+
+static sub_state_t quarter_turn_sub(sub_state_t sub_state, uint8_t face)
+{
+    for (uint8_t i = 0; i < TRACKED; ++i) {
+        for (uint8_t j = 0; j < CUBIES; ++j) {
+            if (source[face][j] == sub_state.pos[i]) {
+                sub_state.pos[i] = j;
+                sub_state.tw[i] = (uint8_t) ((sub_state.tw[i] + twist[face][j]) % 3U);
+                break;
+            }
+        }
+    }
+    return sub_state;
+}
+
+static uint32_t rank_sub_state(const sub_state_t *sub_state)
+{
+    uint32_t p = 0, o = 0;
+    for (uint8_t i = 0; i < TRACKED; ++i) {
+        uint8_t smaller = sub_state->pos[i];
+        for (uint8_t j = 0; j < i; ++j)
+            if (sub_state->pos[j] < sub_state->pos[i])
+                --smaller;
+        p = p * (uint32_t) (CUBIES - i) + smaller;
+        o = o * 3U + sub_state->tw[i];
+    }
+    return p * SUB_TWISTS + o;
+}
+
+static void unrank_sub_state(uint32_t rank, sub_state_t *sub_state)
+{
+    uint32_t p = rank / SUB_TWISTS, o = rank % SUB_TWISTS;
+    uint8_t digit[TRACKED], used[CUBIES] = {0};
+    for (uint8_t i = TRACKED; i-- > 0;) {
+        digit[i] = (uint8_t) (p % (uint32_t) (CUBIES - i));
+        p /= (uint32_t) (CUBIES - i);
+        sub_state->tw[i] = (uint8_t) (o % 3U);
+        o /= 3U;
+    }
+    for (uint8_t i = 0; i < TRACKED; ++i) {
+        uint8_t count = digit[i];
+        for (uint8_t j = 0; j < CUBIES; ++j) {
+            if (used[j])
+                continue;
+            if (count == 0) {
+                sub_state->pos[i] = j;
+                used[j] = 1;
+                break;
+            }
+            --count;
+        }
+    }
 }
 
 static void build_transition_table(void)
@@ -173,6 +249,44 @@ static void build_orien_dist_table(void)
     }
 }
 
+static void build_sub_dist_table(void)
+{
+    uint8_t distance = 1;
+    uint32_t *queue = malloc((size_t) SUB_STATES * sizeof *queue);
+    if (!queue)
+        return;
+    uint32_t head = 0, tail = 1, level_end = 1;
+    sub_state_t solved;
+    for (uint8_t i = 0; i < TRACKED; ++i) {
+        solved.pos[i] = tracked[i];
+        solved.tw[i] = 0;
+    }
+    sub_solved = rank_sub_state(&solved);
+    memset(sub_dist_table, UINT8_MAX, SUB_STATES);
+    queue[0] = sub_solved;
+    sub_dist_table[sub_solved] = 0;
+    while (head < tail) {
+        if (head == level_end) {
+            level_end = tail;
+            ++distance;
+        }
+        sub_state_t here;
+        unrank_sub_state(queue[head++], &here);
+        for (uint8_t face = 0; face < 3; ++face) {
+            sub_state_t next = here;
+            for (uint8_t turn = 0; turn < 3; ++turn) {
+                next = quarter_turn_sub(next, face);
+                uint32_t there = rank_sub_state(&next);
+                if (sub_dist_table[there] == UINT8_MAX) {
+                    sub_dist_table[there] = distance;
+                    queue[tail++] = there;
+                }
+            }
+        }
+    }
+    free(queue);
+}
+
 static void build_full_dist_table(void)
 {
     uint8_t distance = 1;
@@ -205,40 +319,6 @@ static void build_full_dist_table(void)
         }
     }
     free(queue);
-}
-
-static int check_tables(int *perm_max, int *orien_max, int *full_max)
-{
-    *perm_max = 0;
-    if (perm_dist_table[0] != 0)
-        return 1;
-    for (uint16_t p = 0; p < PERMUTATIONS; ++p) {
-        if (perm_dist_table[p] == UINT8_MAX)
-            return 1;
-        if (perm_dist_table[p] > *perm_max)
-            *perm_max = perm_dist_table[p];
-    }
-
-    *orien_max = 0;
-    if (orien_dist_table[0] != 0)
-        return 1;
-    for (uint16_t o = 0; o < ORIENTATIONS; ++o) {
-        if (orien_dist_table[o] == UINT8_MAX)
-            return 1;
-        if (orien_dist_table[o] > *orien_max)
-            *orien_max = orien_dist_table[o];
-    }
-
-    *full_max = 0;
-    if (full_dist_table[0] != 0)
-        return 1;
-    for (uint32_t rank = 0; rank < STATES; ++rank) {
-        if (full_dist_table[rank] == UINT8_MAX)
-            return 1;
-        if (full_dist_table[rank] > *full_max)
-            *full_max = full_dist_table[rank];
-    }
-    return 0;
 }
 
 static uint8_t max(uint8_t a, uint8_t b)
@@ -296,15 +376,49 @@ static int check_solution(uint16_t p, uint16_t o, int length)
     return p == 0 && o == 0;
 }
 
-static int parse_state(const char *input, state_t *state)
+static int check_tables(int *perm_max, int *orien_max, int *sub_max,
+                        int *full_max)
 {
-    for (int i = 0; i < 14; ++i) {
-        int limit = i < 7 ? 7 : 3;
-        if (input[i] < '1' || input[i] > '0' + limit)
-            return 0;
-        (i < 7 ? state->p : state->o)[i % 7] = (uint8_t) (input[i] - '1');
+    *perm_max = 0;
+    if (perm_dist_table[0] != 0)
+        return 1;
+    for (uint16_t p = 0; p < PERMUTATIONS; ++p) {
+        if (perm_dist_table[p] == UINT8_MAX)
+            return 1;
+        if (perm_dist_table[p] > *perm_max)
+            *perm_max = perm_dist_table[p];
     }
-    return input[14] == '\0' && valid(state);
+
+    *orien_max = 0;
+    if (orien_dist_table[0] != 0)
+        return 1;
+    for (uint16_t o = 0; o < ORIENTATIONS; ++o) {
+        if (orien_dist_table[o] == UINT8_MAX)
+            return 1;
+        if (orien_dist_table[o] > *orien_max)
+            *orien_max = orien_dist_table[o];
+    }
+
+    *sub_max = 0;
+    if (sub_dist_table[sub_solved] != 0)
+        return 1;
+    for (uint32_t rank = 0; rank < SUB_STATES; ++rank) {
+        if (sub_dist_table[rank] == UINT8_MAX)
+            return 1;
+        if (sub_dist_table[rank] > *sub_max)
+            *sub_max = sub_dist_table[rank];
+    }
+
+    *full_max = 0;
+    if (full_dist_table[0] != 0)
+        return 1;
+    for (uint32_t rank = 0; rank < STATES; ++rank) {
+        if (full_dist_table[rank] == UINT8_MAX)
+            return 1;
+        if (full_dist_table[rank] > *full_max)
+            *full_max = full_dist_table[rank];
+    }
+    return 0;
 }
 
 static int check_admissible(void)
@@ -340,8 +454,9 @@ static int run_gates(void)
 {
     build_full_dist_table();
 
-    int perm_max, orien_max, full_max;
-    if (check_tables(&perm_max, &orien_max, &full_max) || full_max != 11) {
+    int perm_max, orien_max, sub_max, full_max;
+    if (check_tables(&perm_max, &orien_max, &sub_max, &full_max) ||
+        full_max != 11) {
         fputs("H2 failed: a table is not valid\n", stderr);
         return 1;
     }
@@ -359,8 +474,8 @@ static int run_gates(void)
     state_t worst;
     unrank_state(worst_rank, &worst);
     printf("H1 passed: guess never exceeds true distance\n");
-    printf("H2 passed: tables full, maxima %d, %d, %d\n", perm_max, orien_max,
-           full_max);
+    printf("H2 passed: tables full, maxima %d, %d, %d, %d\n", perm_max,
+           orien_max, sub_max, full_max);
     printf("H3 passed: every result is the true distance\n");
     printf("Worst distance-11 state: ");
     for (int i = 0; i < CUBIES; ++i)
@@ -376,6 +491,7 @@ int main(int argc, char **argv)
     build_transition_table();
     build_perm_dist_table();
     build_orien_dist_table();
+    build_sub_dist_table();
 
     if (argc == 2 && !strcmp(argv[1], "--gates"))
         return run_gates();
