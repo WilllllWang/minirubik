@@ -372,36 +372,49 @@ static uint8_t guess(uint16_t p, uint16_t o)
     return max(pt, sub_dist_table[sub_index(p, o)]);
 }
 
-static int recursion(uint16_t p, uint16_t o, int limit, int depth,
-                     int last_face)
-{
-    ++nodes;
-    if (p == 0 && o == 0)
-        return 1;
-    if (depth + guess(p, o) > limit)
-        return 0;
-
-    for (uint8_t face = 0; face < 3; ++face) {
-        if (face == last_face)
-            continue;
-        uint16_t next_p = p, next_o = o;
-        for (uint8_t turn = 0; turn < 3; ++turn) {
-            next_p = permutation[face][next_p];
-            next_o = orientation[face][next_o];
-            path[depth] = (uint8_t) (face * 3 + turn);
-            if (recursion(next_p, next_o, limit, depth + 1, face))
-                return 1;
-        }
-    }
-    return 0;
-}
-
 static int DFID(uint16_t p, uint16_t o)
 {
+    uint16_t stack_p[12], stack_o[12];
+    uint8_t stack_move[12];
     nodes = 0;
-    for (int limit = guess(p, o); limit <= 11; ++limit)
-        if (recursion(p, o, limit, 0, 3))
-            return limit;
+    for (int limit = guess(p, o); limit <= 11; ++limit) {
+        ++nodes;
+        if (p == 0 && o == 0)
+            return 0;
+        int depth = 0;
+        stack_p[0] = p;
+        stack_o[0] = o;
+        stack_move[0] = 0;
+
+        while (depth >= 0) {
+            uint8_t move = stack_move[depth];
+            if (move == MOVES) {
+                --depth;
+                continue;
+            }
+            stack_move[depth] = (uint8_t) (move + 1);
+
+            uint8_t face = move / 3, turn = move % 3;
+            if (depth > 0 && face == path[depth - 1] / 3)
+                continue;
+
+            uint16_t from_p = turn == 0 ? stack_p[depth] : stack_p[depth + 1];
+            uint16_t from_o = turn == 0 ? stack_o[depth] : stack_o[depth + 1];
+            uint16_t next_p = permutation[face][from_p];
+            uint16_t next_o = orientation[face][from_o];
+            stack_p[depth + 1] = next_p;
+            stack_o[depth + 1] = next_o;
+            path[depth] = move;
+            ++nodes;
+
+            if (next_p == 0 && next_o == 0)
+                return limit;
+            if (depth + 1 + guess(next_p, next_o) > limit)
+                continue;
+            stack_move[depth + 1] = 0;
+            ++depth;
+        }
+    }
     return -1;
 }
 
