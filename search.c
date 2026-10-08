@@ -23,9 +23,7 @@ typedef struct {
     uint8_t pos[TRACKED], tw[TRACKED];
 } sub_state_t;
 
-static const char *const move_names[MOVES] = {"R", "R2", "R'", "",
-                                              "B", "B2", "B'", "",
-                                              "D", "D2", "D'", ""};
+static const char *const move_names[MOVES] = {"R", "R2", "R'", "", "B", "B2", "B'", "", "D", "D2", "D'", ""};
 
 static const uint8_t source[3][CUBIES] = {
     {1, 4, 2, 0, 3, 5, 6},
@@ -42,10 +40,8 @@ static const uint8_t twist[3][CUBIES] = {
 static const uint8_t tracked[TRACKED] = {3, 4, 5, 6};
 
 static uint16_t permutation[3][PERMUTATIONS], orientation[3][ORIENTATIONS];
-static uint16_t *const perm_row[3] = {permutation[0], permutation[1],
-                                      permutation[2]};
-static uint16_t *const orien_row[3] = {orientation[0], orientation[1],
-                                       orientation[2]};
+static uint16_t *const perm_row[3] = {permutation[0], permutation[1], permutation[2]};
+static uint16_t *const orien_row[3] = {orientation[0], orientation[1], orientation[2]};
 static uint8_t perm_dist_table[PERMUTATIONS], orien_dist_table[ORIENTATIONS];
 static uint8_t sub_dist_table[SUB_STATES];
 static uint16_t sub_pos_table[PERMUTATIONS];
@@ -148,8 +144,7 @@ static sub_state_t quarter_turn_sub(sub_state_t sub_state, uint8_t face)
         for (uint8_t j = 0; j < CUBIES; ++j) {
             if (source[face][j] == sub_state.pos[i]) {
                 sub_state.pos[i] = j;
-                sub_state.tw[i] =
-                    (uint8_t) ((sub_state.tw[i] + twist[face][j]) % 3U);
+                sub_state.tw[i] = (uint8_t) ((sub_state.tw[i] + twist[face][j]) % 3U);
                 break;
             }
         }
@@ -468,8 +463,7 @@ static int check_solution(uint16_t p, uint16_t o, int length)
     return p == 0 && o == 0;
 }
 
-static int check_tables(int *perm_max, int *orien_max, int *sub_max,
-                        int *full_max)
+static int check_tables(int *perm_max, int *orien_max, int *sub_max, int *full_max)
 {
     *perm_max = 0;
     if (perm_dist_table[0] != 0)
@@ -559,8 +553,7 @@ static int run_gates(void)
     build_full_dist_table();
 
     int perm_max, orien_max, sub_max, full_max;
-    if (check_tables(&perm_max, &orien_max, &sub_max, &full_max) ||
-        full_max != 11) {
+    if (check_tables(&perm_max, &orien_max, &sub_max, &full_max) || full_max != 11) {
         fputs("H2 failed: a table is not valid\n", stderr);
         return 1;
     }
@@ -582,11 +575,9 @@ static int run_gates(void)
     state_t worst;
     unrank_state(worst_rank, &worst);
     printf("H1 passed: guess never exceeds true distance\n");
-    printf("H2 passed: tables full, maxima %d, %d, %d, %d\n", perm_max,
-           orien_max, sub_max, full_max);
+    printf("H2 passed: tables full, maxima %d, %d, %d, %d\n", perm_max, orien_max, sub_max, full_max);
     printf("H3 passed: every result is the true distance\n");
-    printf("H4 passed: packed positions match for all %d permutations\n",
-           PERMUTATIONS);
+    printf("H4 passed: packed positions match for all %d permutations\n", PERMUTATIONS);
     printf("Worst distance-11 state: ");
     for (int i = 0; i < CUBIES; ++i)
         putchar('1' + worst.p[i]);
@@ -609,8 +600,7 @@ int main(int argc, char **argv)
 
     state_t state;
     if (argc != 2 || !parse_state(argv[1], &state)) {
-        fprintf(stderr, "usage: %s PPPPPPPOOOOOOO | --gates\n",
-                argc > 0 && argv[0] ? argv[0] : "search");
+        fprintf(stderr, "usage: %s PPPPPPPOOOOOOO | --gates\n", argc > 0 && argv[0] ? argv[0] : "search");
         return 2;
     }
 
