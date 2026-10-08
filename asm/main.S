@@ -34,8 +34,8 @@ twist_valid_check:
     addi t4, t4, -49                    # '1'..'3' -> 0..2
     bgeu t4, t2, invalid                # t >= 3
     add  t3, t3, t4                     # sum += t
-    slli t5, s1, 1                      # o * 2
-    add  s1, s1, t5                     # o * 3
+    slli t5, s1, 1
+    add  s1, s1, t5
     add  s1, s1, t4                     # o = o * 3 + t, to avoid multiply
     addi t0, t0, 1                      # ++ptr
     bne  t0, t1, twist_valid_check
@@ -71,9 +71,92 @@ rank_skip:
     addi t3, t3, 2
     bne  t0, t1, rank_outer
 
+    la   s2, perm_dist_table            # Load tables
+    la   s3, orien_dist_table
+    la   s4, sub_dist_table
+    la   s5, sub_pos_table
+    la   s6, twist_table
+
+    mv   a0, s0                         # guess(p, o)
+    mv   a1, s1
+    jal  ra, guess
+
+    li   a7, 1
+    ecall
     li   a7, 10                         # exit(0)
     ecall
+
+guess:
+    add  t0, s2, a0
+    lbu  t0, 0(t0)                      # P
+    add  t1, s3, a1
+    lbu  t1, 0(t1)                      # T
+    bgeu t0, t1, guess_pt
+    mv   t0, t1                         # keep the larger
+guess_pt:
+    slli t2, a0, 1                      # .half = 2 bytes per entry
+    add  t2, s5, t2
+    lhu  t2, 0(t2)                      # packed
+    andi t3, t2, 7                      # pos0
+    srli t4, t2, 3
+    andi t4, t4, 7                      # pos1
+    srli t5, t2, 6
+    andi t5, t5, 7                      # pos2
+    srli t6, t2, 9                      # pos3, packed is only 12 bits
+    slli a2, t3, 1
+    add  a2, a2, t3
+    slli a2, a2, 1                      # pos0 * 6
+    add  a2, a2, t4
+    sltu a3, t3, t4
+    sub  a2, a2, a3                     # + d1
+    slli a3, a2, 2
+    add  a2, a2, a3                     # * 5
+    add  a2, a2, t5
+    sltu a3, t3, t5
+    sub  a2, a2, a3
+    sltu a3, t4, t5
+    sub  a2, a2, a3                     # + d2
+    slli a2, a2, 2                      # * 4
+    add  a2, a2, t6
+    sltu a3, t3, t6
+    sub  a2, a2, a3
+    sltu a3, t4, t6
+    sub  a2, a2, a3
+    sltu a3, t5, t6
+    sub  a2, a2, a3                     # + d3, a2 = rank
+    slli t2, a1, 3                      # 8 bytes per twist row
+    add  t2, s6, t2                     # twist row
+    add  a4, t2, t3
+    lbu  a4, 0(a4)                      # tw[pos0]
+    add  a3, t2, t4
+    lbu  a3, 0(a3)                      # tw[pos1]
+    add  a3, a3, a4
+    slli a4, a4, 1
+    add  a4, a4, a3                     # a4 = a4 * 3 + tw
+    add  a3, t2, t5
+    lbu  a3, 0(a3)                      # tw[pos2]
+    add  a3, a3, a4
+    slli a4, a4, 1
+    add  a4, a4, a3
+    add  a3, t2, t6
+    lbu  a3, 0(a3)                      # tw[pos3]
+    add  a3, a3, a4
+    slli a4, a4, 1
+    add  a4, a4, a3                     # a4 = twists
+    slli a3, a2, 4                      # rank << 4
+    add  a4, a4, a2
+    add  a4, a4, a3
+    slli a3, a3, 2                      # rank << 6
+    add  a4, a4, a3                     # index = rank * 81 + twists
+    add  a4, s4, a4
+    lbu  a4, 0(a4)                      # Q
+    bgeu t0, a4, guess_done
+    mv   t0, a4
+guess_done:
+    mv   a0, t0
+    ret
+
 invalid:
-    li   a0, 2                          # exit(2) error
+    li   a0, 2
     li   a7, 93
     ecall
