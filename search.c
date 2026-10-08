@@ -66,19 +66,27 @@ static state_t quarter_turn(state_t state, uint8_t face)
     return result;
 }
 
-static uint32_t rank_state(const state_t *state)
+static void rank_state(const state_t *state, uint16_t *p_rank, uint16_t *o_rank)
 {
-    uint32_t p = 0, o = 0;
-    for (uint8_t i = 0; i < CUBIES; ++i) {
-        uint8_t smaller = 0;
+    uint8_t smaller[CUBIES - 1];
+    for (uint8_t i = 0; i < CUBIES - 1; ++i) {
+        smaller[i] = 0;
         for (uint8_t j = (uint8_t) (i + 1U); j < CUBIES; ++j)
             if (state->p[j] < state->p[i])
-                ++smaller;
-        p = p * (uint32_t) (CUBIES - i) + smaller;
+                ++smaller[i];
     }
+    uint32_t p = smaller[0];
+    p = (p << 3) - (p << 1) + smaller[1];
+    p = (p << 2) + p + smaller[2];
+    p = (p << 2) + smaller[3];
+    p = (p << 1) + p + smaller[4];
+    p = (p << 1) + smaller[5];
+    *p_rank = (uint16_t) p;
+
+    uint32_t o = 0;
     for (uint8_t i = 0; i < 6; ++i)
-        o = o * 3U + state->o[i];
-    return p * ORIENTATIONS + o;
+        o = (o << 1) + o + state->o[i];
+    *o_rank = (uint16_t) o;
 }
 
 static void unrank_state(uint32_t rank, state_t *state)
@@ -114,16 +122,22 @@ static int valid(const state_t *state)
                 return 0;
         sum = (uint8_t) (sum + state->o[i]);
     }
-    return sum % 3U == 0;
+    while (sum >= 3)
+        sum = (uint8_t) (sum - 3);
+    return sum == 0;
 }
 
 static int parse_state(const char *input, state_t *state)
 {
-    for (int i = 0; i < 14; ++i) {
-        int limit = i < 7 ? 7 : 3;
-        if (input[i] < '1' || input[i] > '0' + limit)
+    for (int i = 0; i < CUBIES; ++i) {
+        if (input[i] < '1' || input[i] > '7')
             return 0;
-        (i < 7 ? state->p : state->o)[i % 7] = (uint8_t) (input[i] - '1');
+        state->p[i] = (uint8_t) (input[i] - '1');
+    }
+    for (int i = 0; i < CUBIES; ++i) {
+        if (input[CUBIES + i] < '1' || input[CUBIES + i] > '3')
+            return 0;
+        state->o[i] = (uint8_t) (input[CUBIES + i] - '1');
     }
     return input[14] == '\0' && valid(state);
 }
@@ -189,16 +203,18 @@ static void build_transition_table(void)
         unrank_state((uint32_t) rank * ORIENTATIONS, &state);
         for (uint8_t face = 0; face < 3; ++face) {
             state_t next = quarter_turn(state, face);
-            permutation[face][rank] =
-                (uint16_t) (rank_state(&next) / ORIENTATIONS);
+            uint16_t next_p, next_o;
+            rank_state(&next, &next_p, &next_o);
+            permutation[face][rank] = next_p;
         }
     }
     for (uint16_t rank = 0; rank < ORIENTATIONS; ++rank) {
         unrank_state(rank, &state);
         for (uint8_t face = 0; face < 3; ++face) {
             state_t next = quarter_turn(state, face);
-            orientation[face][rank] =
-                (uint16_t) (rank_state(&next) % ORIENTATIONS);
+            uint16_t next_p, next_o;
+            rank_state(&next, &next_p, &next_o);
+            orientation[face][rank] = next_o;
         }
     }
 }
@@ -364,8 +380,10 @@ static uint8_t max(uint8_t a, uint8_t b)
 static uint32_t sub_index(uint16_t p, uint16_t o)
 {
     uint32_t packed = sub_pos_table[p];
-    uint32_t pos0 = packed & 7, pos1 = (packed >> 3) & 7;
-    uint32_t pos2 = (packed >> 6) & 7, pos3 = (packed >> 9) & 7;
+    uint32_t pos0 = packed & 7;
+    uint32_t pos1 = (packed >> 3) & 7;
+    uint32_t pos2 = (packed >> 6) & 7;
+    uint32_t pos3 = (packed >> 9) & 7;
 
     uint32_t d1 = pos1 - (pos0 < pos1);
     uint32_t d2 = pos2 - (pos0 < pos2) - (pos1 < pos2);
@@ -596,9 +614,8 @@ int main(int argc, char **argv)
         return 2;
     }
 
-    uint32_t rank = rank_state(&state);
-    uint16_t p = (uint16_t) (rank / ORIENTATIONS);
-    uint16_t o = (uint16_t) (rank % ORIENTATIONS);
+    uint16_t p, o;
+    rank_state(&state, &p, &o);
     int length = DFID(p, o);
     if (length < 0) {
         fputs("No solution within 11 moves\n", stderr);
