@@ -587,6 +587,23 @@ static int run_gates(void)
     return 0;
 }
 
+static int print_hardest(void)
+{
+    build_full_dist_table();
+    for (uint32_t rank = 0; rank < STATES; ++rank) {
+        if (full_dist_table[rank] != 11)
+            continue;
+        state_t state;
+        unrank_state(rank, &state);
+        for (int i = 0; i < CUBIES; ++i)
+            putchar('1' + state.p[i]);
+        for (int i = 0; i < CUBIES; ++i)
+            putchar('1' + state.o[i]);
+        putchar('\n');
+    }
+    return fflush(stdout) != 0;
+}
+
 static void print_halves(const char *label, const uint16_t *values, uint32_t count)
 {
     printf(".balign 2\n%s:", label);
@@ -627,10 +644,12 @@ int main(int argc, char **argv)
         return run_gates();
     if (argc == 2 && !strcmp(argv[1], "--tables"))
         return print_tables();
+    if (argc == 2 && !strcmp(argv[1], "--hardest"))
+        return print_hardest();
 
     state_t state;
     if (argc != 2 || !parse_state(argv[1], &state)) {
-        fprintf(stderr, "usage: %s PPPPPPPOOOOOOO | --gates | --tables\n", argc > 0 && argv[0] ? argv[0] : "search");
+        fprintf(stderr, "usage: %s PPPPPPPOOOOOOO | --gates | --tables | --hardest\n", argc > 0 && argv[0] ? argv[0] : "search");
         return 2;
     }
 
