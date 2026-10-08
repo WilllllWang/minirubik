@@ -1,21 +1,43 @@
 .option norelax                         # keep la as auipc + addi, nothing sets gp
+.equ TESTS, 1                           # 1: run the 3 test cases before the input
+
 .section .rodata
-.include "tables.s"
+.include "tables.s"                     # 7 tables from ./search --tables
 .balign 2                               # lhu needs an even address
-factorials: .half 720, 120, 24, 6, 2, 1 # Lehmer rank values to avoid multiply 6! .. 1!
+factorials:  .half 720, 120, 24, 6, 2, 1        # Lehmer place values 6! .. 1!, no multiply
 .balign 4
-move_rows: .word permutation, orientation, permutation, orientation, permutation, orientation, 0, 0
-           .word permutation + 10080, orientation + 1458, permutation + 10080, orientation + 1458, permutation + 10080, orientation + 1458, 0, 0
-           .word permutation + 20160, orientation + 2916, permutation + 20160, orientation + 2916, permutation + 20160, orientation + 2916, 0, 0
-next_move: .byte 1, 2, 4, 0, 5, 6, 8, 0, 9, 10, 12, 0
+move_rows:   .word permutation, orientation, permutation, orientation, permutation, orientation, 0, 0
+             .word permutation + 10080, orientation + 1458, permutation + 10080, orientation + 1458, permutation + 10080, orientation + 1458, 0, 0
+             .word permutation + 20160, orientation + 2916, permutation + 20160, orientation + 2916, permutation + 20160, orientation + 2916, 0, 0
+next_move:   .byte 1, 2, 4, 0, 5, 6, 8, 0, 9, 10, 12, 0
+
 .data
-frames: .byte 0, 0, 0, 0, 0, 255, 0, 0    # frame -1, only its move byte (255) is used
-        .zero 96                          # frames 0..11, 8 bytes each
-input: .string "54721631111111"
+frames:      .byte 0, 0, 0, 0, 0, 255, 0, 0     # frame -1, only its move byte (255) is used
+             .zero 96                           # frames 0..11, 8 bytes each
+input:       .string "54721631111111"
+
+test_solved: .string "12345671111111"
+test_short:  .string "26547312333212"           # R B D' from solved
+test_far:    .string "21345671111111"
+.balign 4
+cases:                                          # (string, expected length), -1 = any
+.if TESTS
+             .word test_solved, 0
+             .word test_short, 3
+             .word test_far, 11
+.endif
+             .word input, -1
+cases_end:
+
 .text
 .globl _start
 _start:
-    la   a0, input                      # a0 = address of the input
+    la   a5, cases                      # a5 = current case, a6 = end of the table
+    la   a6, cases_end
+next_case:
+    lw   a0, 0(a5)                      # a0 = address of the input
+
+    # cubie digits '1'..'7': range check and seen mask
     mv   t0, a0                         # ptr = input
     addi t1, a0, 7                      # end = input + 7
     li   t2, 7                          # cubie digit limit
@@ -33,6 +55,7 @@ pos_valid_check:
     li   t6, 127                        # 0b1111111 mask
     bne  s1, t6, invalid                # check for duplicates
 
+    # twist digits '1'..'3': range check, twist sum, o from the first 6
     addi t1, t0, 6                      # end = ptr + 6, ptr is at first twist
     li   t2, 3                          # twist digit limit
     li   t3, 0                          # twist sum = 0
@@ -59,6 +82,7 @@ twist_valid_check:
     andi t5, t5, 1
     beqz t5, invalid                    # twist sum % 3 == 0
 
+    # permutation rank p: add the place value for each smaller cubie to the right
     mv   t0, a0                         # i = input
     addi t1, a0, 6                      # i stops after position 5
     addi t2, a0, 7                      # j stops after position 6
@@ -79,12 +103,14 @@ rank_skip:
     addi t3, t3, 2
     bne  t0, t1, rank_outer
 
-    la   s2, perm_dist_table            # Load tables
+    # table addresses for guess, loaded once
+    la   s2, perm_dist_table
     la   s3, orien_dist_table
     la   s4, sub_dist_table
     la   s5, sub_pos_table
     la   s6, twist_table
 
+    # search setup: root in frame 0, first limit = guess(root)
     la   s7, frames + 8                 # frame 0
     sh   s0, 0(s7)                      # root p
     sh   s1, 2(s7)                      # root o
@@ -99,13 +125,13 @@ rank_skip:
     jal  ra, guess
     mv   s9, a0                         # limit = guess(root)
 
+    # one round per limit, depth-first over the frames
 round:
     li   t0, 12
     beq  s9, t0, no_solution
     mv   s0, s7                         # back to frame 0
     addi s1, s9, -1                     # budget at depth 0
     sb   zero, 4(s7)                    # frame 0 starts at move 0
-
 search_loop:
     lbu  t0, 4(s0)                      # move to try
     beq  t0, s10, go_up                 # all 12 tried
@@ -122,7 +148,6 @@ search_loop:
     bnez t3, have_src
     lhu  a0, 0(s0)                      # turn 0 starts from this frame
     lhu  a1, 2(s0)
-
 have_src:
     slli t3, t0, 3
     add  t3, s8, t3
@@ -158,7 +183,42 @@ no_solution:
     li   a7, 93                         # exit(1)
     ecall
 
+    # T5: replay the path from the root, it must reach solved
 found:
+    lhu  a0, 0(s7)                      # root p
+    lhu  a1, 2(s7)                      # root o
+    mv   t0, s7
+    slli t1, s9, 3
+    add  t1, s7, t1
+replay:
+    beq  t0, t1, replay_done
+    lbu  t2, 5(t0)                      # move
+    slli t3, t2, 3
+    add  t3, s8, t3
+    lw   t4, 0(t3)                      # rows of its face
+    lw   t5, 4(t3)
+    andi t6, t2, 3
+    addi t6, t6, 1                      # quarter turns
+replay_turn:
+    slli a0, a0, 1
+    add  a0, t4, a0
+    lhu  a0, 0(a0)
+    slli a1, a1, 1
+    add  a1, t5, a1
+    lhu  a1, 0(a1)
+    addi t6, t6, -1
+    bnez t6, replay_turn
+    addi t0, t0, 8
+    j    replay
+replay_done:
+    or   t2, a0, a1
+    bnez t2, check_failed               # path must reach solved
+    lw   t2, 4(a5)                      # expected length
+    bltz t2, print_result               # -1 = any
+    bne  t2, s9, check_failed
+
+    # print the length and the move numbers
+print_result:
     mv   a0, s9
     li   a7, 1
     ecall
@@ -176,9 +236,20 @@ print_path:
     addi t0, t0, 8
     j    print_path
 print_done:
+    li   a0, 10
+    li   a7, 11
+    ecall
+    addi a5, a5, 8
+    bne  a5, a6, next_case
     li   a7, 10                         # exit(0)
     ecall
 
+check_failed:
+    li   a0, 3
+    li   a7, 93                         # exit(3)
+    ecall
+
+    # guess(a0 = p, a1 = o) -> a0 = max(P, T, Q), uses t0-t6 and a2-a4
 guess:
     add  t0, s2, a0
     lbu  t0, 0(t0)                      # P
@@ -196,6 +267,7 @@ guess_pt:
     srli t5, t2, 6
     andi t5, t5, 7                      # pos2
     srli t6, t2, 9                      # pos3, packed is only 12 bits
+
     slli a2, t3, 1
     add  a2, a2, t3
     slli a2, a2, 1                      # pos0 * 6
@@ -217,6 +289,7 @@ guess_pt:
     sub  a2, a2, a3
     sltu a3, t5, t6
     sub  a2, a2, a3                     # + d3, a2 = rank
+
     slli t2, a1, 3                      # 8 bytes per twist row
     add  t2, s6, t2                     # twist row
     add  a4, t2, t3
@@ -236,6 +309,7 @@ guess_pt:
     add  a3, a3, a4
     slli a4, a4, 1
     add  a4, a4, a3                     # a4 = twists
+
     slli a3, a2, 4                      # rank << 4
     add  a4, a4, a2
     add  a4, a4, a3
@@ -251,5 +325,5 @@ guess_done:
 
 invalid:
     li   a0, 2
-    li   a7, 93
+    li   a7, 93                         # exit(2)
     ecall
