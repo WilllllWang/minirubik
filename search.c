@@ -8,7 +8,7 @@ enum {
     PERMUTATIONS = 5040,
     ORIENTATIONS = 729,
     STATES = PERMUTATIONS * ORIENTATIONS,
-    MOVES = 9,
+    MOVES = 12,
     TRACKED = 4,
     SUB_POSITIONS = 840,
     SUB_TWISTS = 81,
@@ -23,8 +23,9 @@ typedef struct {
     uint8_t pos[TRACKED], tw[TRACKED];
 } sub_state_t;
 
-static const char *const move_names[MOVES] = {"R",  "R2", "R'", "B", "B2",
-                                              "B'", "D",  "D2", "D'"};
+static const char *const move_names[MOVES] = {"R", "R2", "R'", "",
+                                              "B", "B2", "B'", "",
+                                              "D", "D2", "D'", ""};
 
 static const uint8_t source[3][CUBIES] = {
     {1, 4, 2, 0, 3, 5, 6},
@@ -392,10 +393,13 @@ static int DFID(uint16_t p, uint16_t o)
                 --depth;
                 continue;
             }
-            stack_move[depth] = (uint8_t) (move + 1);
+            uint8_t next_move = (uint8_t) (move + 1);
+            if ((next_move & 3) == 3)
+                ++next_move;
+            stack_move[depth] = next_move;
 
-            uint8_t face = move / 3, turn = move % 3;
-            if (depth > 0 && face == path[depth - 1] / 3)
+            uint8_t face = move >> 2, turn = move & 3;
+            if (depth > 0 && face == path[depth - 1] >> 2)
                 continue;
 
             uint16_t from_p = turn == 0 ? stack_p[depth] : stack_p[depth + 1];
@@ -421,7 +425,7 @@ static int DFID(uint16_t p, uint16_t o)
 static int check_solution(uint16_t p, uint16_t o, int length)
 {
     for (int i = 0; i < length; ++i) {
-        uint8_t face = path[i] / 3, turns = path[i] % 3 + 1;
+        uint8_t face = path[i] >> 2, turns = (path[i] & 3) + 1;
         for (uint8_t turn = 0; turn < turns; ++turn) {
             p = permutation[face][p];
             o = orientation[face][o];
