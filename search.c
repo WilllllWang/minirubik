@@ -42,10 +42,14 @@ static const uint8_t twist[3][CUBIES] = {
 static const uint8_t tracked[TRACKED] = {3, 4, 5, 6};
 
 static uint16_t permutation[3][PERMUTATIONS], orientation[3][ORIENTATIONS];
+static uint16_t *const perm_row[3] = {permutation[0], permutation[1],
+                                      permutation[2]};
+static uint16_t *const orien_row[3] = {orientation[0], orientation[1],
+                                       orientation[2]};
 static uint8_t perm_dist_table[PERMUTATIONS], orien_dist_table[ORIENTATIONS];
 static uint8_t sub_dist_table[SUB_STATES];
 static uint16_t sub_pos_table[PERMUTATIONS];
-static uint8_t twist_table[ORIENTATIONS][CUBIES];
+static uint8_t twist_table[ORIENTATIONS][8];
 static uint32_t sub_solved;
 static uint8_t full_dist_table[STATES];
 static uint8_t path[11];
@@ -404,8 +408,8 @@ static int DFID(uint16_t p, uint16_t o)
 
             uint16_t from_p = turn == 0 ? stack_p[depth] : stack_p[depth + 1];
             uint16_t from_o = turn == 0 ? stack_o[depth] : stack_o[depth + 1];
-            uint16_t next_p = permutation[face][from_p];
-            uint16_t next_o = orientation[face][from_o];
+            uint16_t next_p = perm_row[face][from_p];
+            uint16_t next_o = orien_row[face][from_o];
             stack_p[depth + 1] = next_p;
             stack_o[depth + 1] = next_o;
             path[depth] = move;
@@ -427,8 +431,8 @@ static int check_solution(uint16_t p, uint16_t o, int length)
     for (int i = 0; i < length; ++i) {
         uint8_t face = path[i] >> 2, turns = (path[i] & 3) + 1;
         for (uint8_t turn = 0; turn < turns; ++turn) {
-            p = permutation[face][p];
-            o = orientation[face][o];
+            p = perm_row[face][p];
+            o = orien_row[face][o];
         }
     }
     return p == 0 && o == 0;
