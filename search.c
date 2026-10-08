@@ -587,6 +587,34 @@ static int run_gates(void)
     return 0;
 }
 
+static void print_halves(const char *label, const uint16_t *values, uint32_t count)
+{
+    printf(".balign 2\n%s:", label);
+    for (uint32_t i = 0; i < count; ++i)
+        printf(i % 16 ? ", %u" : "\n.half %u", values[i]);
+    putchar('\n');
+}
+
+static void print_bytes(const char *label, const uint8_t *values, uint32_t count)
+{
+    printf("%s:", label);
+    for (uint32_t i = 0; i < count; ++i)
+        printf(i % 16 ? ", %u" : "\n.byte %u", values[i]);
+    putchar('\n');
+}
+
+static int print_tables(void)
+{
+    print_halves("permutation", &permutation[0][0], 3 * PERMUTATIONS);
+    print_halves("orientation", &orientation[0][0], 3 * ORIENTATIONS);
+    print_halves("sub_pos_table", sub_pos_table, PERMUTATIONS);
+    print_bytes("perm_dist_table", perm_dist_table, PERMUTATIONS);
+    print_bytes("orien_dist_table", orien_dist_table, ORIENTATIONS);
+    print_bytes("sub_dist_table", sub_dist_table, SUB_STATES);
+    print_bytes("twist_table", &twist_table[0][0], ORIENTATIONS * 8);
+    return fflush(stdout) != 0;
+}
+
 int main(int argc, char **argv)
 {
     build_transition_table();
@@ -597,10 +625,12 @@ int main(int argc, char **argv)
 
     if (argc == 2 && !strcmp(argv[1], "--gates"))
         return run_gates();
+    if (argc == 2 && !strcmp(argv[1], "--tables"))
+        return print_tables();
 
     state_t state;
     if (argc != 2 || !parse_state(argv[1], &state)) {
-        fprintf(stderr, "usage: %s PPPPPPPOOOOOOO | --gates\n", argc > 0 && argv[0] ? argv[0] : "search");
+        fprintf(stderr, "usage: %s PPPPPPPOOOOOOO | --gates | --tables\n", argc > 0 && argv[0] ? argv[0] : "search");
         return 2;
     }
 
