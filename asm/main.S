@@ -1,8 +1,16 @@
+.option norelax                         # keep la as auipc + addi, nothing sets gp
 .section .rodata
 .include "tables.s"
 .balign 2                               # lhu needs an even address
 factorials: .half 720, 120, 24, 6, 2, 1 # Lehmer rank values to avoid multiply 6! .. 1!
+.balign 4
+move_rows: .word permutation, orientation, permutation, orientation, permutation, orientation, 0, 0
+           .word permutation + 10080, orientation + 1458, permutation + 10080, orientation + 1458, permutation + 10080, orientation + 1458, 0, 0
+           .word permutation + 20160, orientation + 2916, permutation + 20160, orientation + 2916, permutation + 20160, orientation + 2916, 0, 0
+next_move: .byte 1, 2, 4, 0, 5, 6, 8, 0, 9, 10, 12, 0
 .data
+frames: .byte 0, 0, 0, 0, 0, 255, 0, 0    # frame -1, only its move byte (255) is used
+        .zero 96                          # frames 0..11, 8 bytes each
 input: .string "54721631111111"
 .text
 .globl _start
@@ -77,12 +85,97 @@ rank_skip:
     la   s5, sub_pos_table
     la   s6, twist_table
 
-    mv   a0, s0                         # guess(p, o)
+    la   s7, frames + 8                 # frame 0
+    sh   s0, 0(s7)                      # root p
+    sh   s1, 2(s7)                      # root o
+    la   s8, move_rows
+    li   s10, 12                        # all 12 moves tried
+    la   s11, next_move
+    li   s9, 0
+    or   t0, s0, s1
+    beqz t0, found                      # already solved, 0 moves
+    mv   a0, s0
     mv   a1, s1
     jal  ra, guess
+    mv   s9, a0                         # limit = guess(root)
 
+round:
+    li   t0, 12
+    beq  s9, t0, no_solution
+    mv   s0, s7                         # back to frame 0
+    addi s1, s9, -1                     # budget at depth 0
+    sb   zero, 4(s7)                    # frame 0 starts at move 0
+
+search_loop:
+    lbu  t0, 4(s0)                      # move to try
+    beq  t0, s10, go_up                 # all 12 tried
+    add  t1, s11, t0
+    lbu  t1, 0(t1)                      # next move
+    sb   t1, 4(s0)
+    srli t2, t0, 2                      # face
+    lbu  t3, -3(s0)                     # byte +5 of the frame above
+    srli t3, t3, 2                      # face of the move that led here
+    beq  t2, t3, search_loop            # same face, skip
+    andi t3, t0, 3                      # turn
+    lhu  a0, 8(s0)                      # child slot (previous turn)
+    lhu  a1, 10(s0)
+    bnez t3, have_src
+    lhu  a0, 0(s0)                      # turn 0 starts from this frame
+    lhu  a1, 2(s0)
+
+have_src:
+    slli t3, t0, 3
+    add  t3, s8, t3
+    lw   t4, 0(t3)                      # perm row
+    lw   t5, 4(t3)                      # orien row
+    slli a0, a0, 1
+    add  a0, t4, a0
+    lhu  a0, 0(a0)                      # next p
+    slli a1, a1, 1
+    add  a1, t5, a1
+    lhu  a1, 0(a1)                      # next o
+    sh   a0, 8(s0)                      # child
+    sh   a1, 10(s0)
+    sb   t0, 5(s0)                      # path
+    or   t1, a0, a1
+    beqz t1, found
+    jal  ra, guess                      # a0, a1 are already the child
+    bltu s1, a0, search_loop            # cut
+    sb   zero, 12(s0)                   # child starts at move 0
+    addi s0, s0, 8                      # go down
+    addi s1, s1, -1
+    j    search_loop
+
+go_up:
+    addi s0, s0, -8
+    addi s1, s1, 1
+    bgeu s0, s7, search_loop            # still inside the round
+    addi s9, s9, 1                      # next limit
+    j    round
+
+no_solution:
+    li   a0, 1
+    li   a7, 93                         # exit(1)
+    ecall
+
+found:
+    mv   a0, s9
     li   a7, 1
     ecall
+    mv   t0, s7                         # frame 0
+    slli t1, s9, 3
+    add  t1, s7, t1                     # end = frame s9
+print_path:
+    beq  t0, t1, print_done
+    li   a0, 32
+    li   a7, 11
+    ecall
+    lbu  a0, 5(t0)
+    li   a7, 1
+    ecall
+    addi t0, t0, 8
+    j    print_path
+print_done:
     li   a7, 10                         # exit(0)
     ecall
 
