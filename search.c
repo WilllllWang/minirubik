@@ -363,12 +363,24 @@ static uint8_t max(uint8_t a, uint8_t b)
 
 static uint32_t sub_index(uint16_t p, uint16_t o)
 {
-    sub_state_t sub_state;
-    for (uint8_t i = 0; i < TRACKED; ++i) {
-        sub_state.pos[i] = (sub_pos_table[p] >> (3 * i)) & 7;
-        sub_state.tw[i] = twist_table[o][sub_state.pos[i]];
-    }
-    return rank_sub_state(&sub_state);
+    uint32_t packed = sub_pos_table[p];
+    uint32_t pos0 = packed & 7, pos1 = (packed >> 3) & 7;
+    uint32_t pos2 = (packed >> 6) & 7, pos3 = (packed >> 9) & 7;
+
+    uint32_t d1 = pos1 - (pos0 < pos1);
+    uint32_t d2 = pos2 - (pos0 < pos2) - (pos1 < pos2);
+    uint32_t d3 = pos3 - (pos0 < pos3) - (pos1 < pos3) - (pos2 < pos3);
+    uint32_t rank = (pos0 << 3) - (pos0 << 1) + d1;
+    rank = (rank << 2) + rank + d2;
+    rank = (rank << 2) + d3;
+
+    const uint8_t *tw = twist_table[o];
+    uint32_t twists = tw[pos0];
+    twists = (twists << 1) + twists + tw[pos1];
+    twists = (twists << 1) + twists + tw[pos2];
+    twists = (twists << 1) + twists + tw[pos3];
+
+    return (rank << 6) + (rank << 4) + rank + twists;
 }
 
 static uint8_t guess(uint16_t p, uint16_t o)
