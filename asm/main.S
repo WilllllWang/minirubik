@@ -1,15 +1,34 @@
-.option norelax                         # keep la as auipc + addi, nothing sets gp
-.equ TESTS, 1                           # 1: run the 3 test cases before the input
+.option norelax                           # keep la as auipc + addi, nothing sets gp
+.equ TESTS, 1                             # 1: run the 3 test cases before the input
+.equ RENDER, 0                            # 1: GUI build that draws on the LED matrix
+.equ DELAY, 3000000
 
 .section .rodata
-.include "tables.s"                     # 7 tables from ./search --tables
-.balign 2                               # lhu needs an even address
-factorials:  .half 720, 120, 24, 6, 2, 1        # Lehmer place values 6! .. 1!, no multiply
+.include "tables.s"                       # 7 tables from ./search --tables
+.balign 2                                 # lhu needs an even address
+factorials:  .half 720, 120, 24, 6, 2, 1  # Lehmer place values 6! .. 1!, no multiply
 .balign 4
 move_rows:   .word permutation, orientation, permutation, orientation, permutation, orientation, 0, 0
              .word permutation + 10080, orientation + 1458, permutation + 10080, orientation + 1458, permutation + 10080, orientation + 1458, 0, 0
              .word permutation + 20160, orientation + 2916, permutation + 20160, orientation + 2916, permutation + 20160, orientation + 2916, 0, 0
 next_move:   .byte 1, 2, 4, 0, 5, 6, 8, 0, 9, 10, 12, 0
+.if RENDER
+.balign 4                                 # lw needs a multiple of 4
+colors:      .word 0xFFFFFF, 0xFFA500, 0x00FF00, 0xFF0000, 0x0000FF, 0xFFFF00   # U L F R B D
+cycles:      .byte 1,18,21,9,   3,16,23,11,  12,13,15,14,  0,0,0,0    # R: U1 B2 D1 F1, U3 B0 D3 F3, R0 R1 R3 R2
+             .byte 0,6,23,13,   1,4,22,15,   16,17,19,18,  0,0,0,0    # B: U0 L2 D3 R1, U1 L0 D2 R3, B0 B1 B3 B2
+             .byte 6,10,14,18,  7,11,15,19,  20,21,23,22,  0,0,0,0    # D: L2 F2 R2 B2, L3 F3 R3 B3, D0 D1 D3 D2
+
+# Ripes defines the LED_MATRIX_0 names in ripes_system.h, which only the GUI build reads
+.equ LED, LED_MATRIX_0_BASE
+.equ W, LED_MATRIX_0_WIDTH
+pixels:      .word LED + (0*W + 9)*4,  LED + (0*W + 13)*4,  LED + (3*W + 9)*4,   LED + (3*W + 13)*4     # U
+             .word LED + (7*W + 0)*4,  LED + (7*W + 4)*4,   LED + (10*W + 0)*4,  LED + (10*W + 4)*4     # L
+             .word LED + (7*W + 9)*4,  LED + (7*W + 13)*4,  LED + (10*W + 9)*4,  LED + (10*W + 13)*4    # F
+             .word LED + (7*W + 18)*4, LED + (7*W + 22)*4,  LED + (10*W + 18)*4, LED + (10*W + 22)*4    # R
+             .word LED + (7*W + 27)*4, LED + (7*W + 31)*4,  LED + (10*W + 27)*4, LED + (10*W + 31)*4    # B
+             .word LED + (14*W + 9)*4, LED + (14*W + 13)*4, LED + (17*W + 9)*4,  LED + (17*W + 13)*4    # D
+.endif
 
 .data
 frames:      .byte 0, 0, 0, 0, 0, 255, 0, 0     # frame -1, only its move byte (255) is used
@@ -28,6 +47,9 @@ cases:                                          # (string, expected length), -1 
 .endif
              .word input, -1
 cases_end:
+.if RENDER
+stickers:    .byte 0,0,0,0, 1,1,1,1, 2,2,2,2, 3,3,3,3, 4,4,4,4, 5,5,5,5   # solved, U L F R B D
+.endif
 
 .text
 .globl _start
@@ -239,17 +261,47 @@ print_done:
     li   a0, 10
     li   a7, 11
     ecall
+.if RENDER
+    # animation: rebuild the input from solved, then play the path
+    slli t0, s9, 3
+    add  s1, s7, t0                     # s1 = frame after the last move
+    mv   s0, s1
+rebuild:
+    beq  s0, s7, rebuild_done           # back at frame 0
+    addi s0, s0, -8                     # previous frame
+    lbu  t0, 5(s0)                      # move
+    srli a0, t0, 2                      # face
+    andi t0, t0, 3                      # turn
+    li   a1, 3
+    sub  a1, a1, t0                     # inverse = 3 - turn quarter turns
+    jal  ra, turn_face
+    j    rebuild
+rebuild_done:
+    jal  ra, draw                       # the input state
+play:
+    beq  s0, s1, play_done              # all moves shown
+    lbu  t0, 5(s0)                      # move
+    srli a0, t0, 2                      # face
+    andi a1, t0, 3
+    addi a1, a1, 1                      # turn + 1 quarter turns
+    jal  ra, turn_face
+    jal  ra, draw
+    addi s0, s0, 8                      # next frame
+    j    play
+play_done:
+.endif
     addi a5, a5, 8
     bne  a5, a6, next_case
     li   a7, 10                         # exit(0)
     ecall
+
 
 check_failed:
     li   a0, 3
     li   a7, 93                         # exit(3)
     ecall
 
-    # guess(a0 = p, a1 = o) -> a0 = max(P, T, Q), uses t0-t6 and a2-a4
+    # guess(a0 = p, a1 = o) -> a0 = max(P, T, Q)
 guess:
     add  t0, s2, a0
     lbu  t0, 0(t0)                      # P
@@ -322,6 +374,78 @@ guess_pt:
 guess_done:
     mv   a0, t0
     ret
+
+.if RENDER
+    # turn_face(a0 = face, a1 = quarter turns)
+turn_face:
+    la   t2, stickers
+    la   t0, cycles
+    slli a0, a0, 4                      # 16 bytes per face
+    add  a0, t0, a0                     # row of this face
+turn_once:
+    mv   t0, a0                         # first cycle
+    addi t1, a0, 12                     # end of the 3 cycles
+turn_cycle:
+    lbu  t3, 0(t0)
+    add  t3, t2, t3                     # &s[a]
+    lbu  t4, 1(t0)
+    add  t4, t2, t4                     # &s[b]
+    lbu  t5, 2(t0)
+    add  t5, t2, t5                     # &s[c]
+    lbu  t6, 3(t0)
+    add  t6, t2, t6                     # &s[d]
+
+    lbu  a2, 0(t6)                      # keep s[d]
+    lbu  a3, 0(t5)
+    sb   a3, 0(t6)                      # s[d] = s[c]
+    lbu  a3, 0(t4)
+    sb   a3, 0(t5)                      # s[c] = s[b]
+    lbu  a3, 0(t3)
+    sb   a3, 0(t4)                      # s[b] = s[a]
+    sb   a2, 0(t3)                      # s[a] = old s[d]
+
+    addi t0, t0, 4                      # next cycle
+    bne  t0, t1, turn_cycle
+    addi a1, a1, -1                     # one quarter turn done
+    bnez a1, turn_once
+    ret
+
+    # draw(): paint all 24 stickers
+draw:
+    la   t0, stickers
+    addi t1, t0, 24                     # end of stickers
+    la   t2, pixels
+    la   t3, colors
+draw_loop:
+    lbu  t4, 0(t0)                      # color number
+    slli t4, t4, 2
+    add  t4, t3, t4
+    lw   t4, 0(t4)                      # 0x00RRGGBB
+
+    lw   t5, 0(t2)                      # LED address of the top-left pixel
+
+    sw   t4, 0(t5)                      # row 0
+    sw   t4, 4(t5)
+    sw   t4, 8(t5)
+    sw   t4, 12(t5)
+    sw   t4, W*4(t5)                    # row 1
+    sw   t4, W*4+4(t5)
+    sw   t4, W*4+8(t5)
+    sw   t4, W*4+12(t5)
+    sw   t4, 2*W*4(t5)                  # row 2
+    sw   t4, 2*W*4+4(t5)
+    sw   t4, 2*W*4+8(t5)
+    sw   t4, 2*W*4+12(t5)
+
+    addi t0, t0, 1                      # next sticker
+    addi t2, t2, 4                      # next pixels entry
+    bne  t0, t1, draw_loop
+    li   t0, DELAY
+draw_wait:
+    addi t0, t0, -1                     # busy-wait so the picture stays visible
+    bnez t0, draw_wait
+    ret
+.endif
 
 invalid:
     li   a0, 2
